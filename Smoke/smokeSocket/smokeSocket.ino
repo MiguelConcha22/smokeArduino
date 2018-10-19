@@ -6,6 +6,10 @@
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
+#define ID "Smoke-"
+String hostname = ID + String(ESP.getChipId(), HEX) + String(ESP.getFlashChipId(), HEX);
+String url = "quiet-journey-37928.herokuapp.com";
+  
 SocketIoClient webSocket;
 
 int sensorPin = A0;
@@ -31,6 +35,7 @@ void alertFalse(const char * payload, size_t length) {
 void connectReady(const char * payload, size_t length){
   socketConnected = true;
   webSocket.emit("loginsensorkit", "{\"sensorid\":\"k1000\"}");
+  //webSocket.emit("loginsensorkit", "{\"sensorid\":\"" + hostname + "\"}");
   sendAlert();
 }
 
@@ -52,7 +57,7 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
   
   Serial.begin(115200);
-
+  
   WiFiManager wifiManager;
   
   //reset saved settings
@@ -73,7 +78,8 @@ void setup() {
   //emitId se ejecuta solo cuando logra conectarse de manera exitosa al servidor
   webSocket.on("connect", connectReady);
   
-  webSocket.begin("quiet-journey-37928.herokuapp.com");
+  webSocket.begin(url);
+
 }
 
 void loop() {
