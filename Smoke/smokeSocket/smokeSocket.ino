@@ -7,11 +7,12 @@
 #include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
 #define ID "Smoke-"
-String hostname = ID + String(ESP.getChipId(), HEX) + String(ESP.getFlashChipId(), HEX);
+String kitID = ID + String(ESP.getChipId(), HEX) + String(ESP.getFlashChipId(), HEX);
 String url = "quiet-journey-37928.herokuapp.com";
   
 SocketIoClient webSocket;
 
+int alarmPin = D8;
 int sensorPin = A0;
 int sensorValue = 0;
 bool socketConnected = false;
@@ -29,13 +30,20 @@ void alertTrue(const char * payload, size_t length) {
 void alertFalse(const char * payload, size_t length) {
   digitalWrite(LED_BUILTIN, HIGH);
   Serial.printf("got alert: %s\n", payload);
+  digitalWrite(alarmPin,LOW);
+}
+
+//recibe desde la app que hay que apagar la alerta
+void desactivate(const char * payload, size_t length) {
+  digitalWrite(LED_BUILTIN, LOW);
+  Serial.printf("got alert: %s\n", payload);
 }
 
 //Envia id del kit cuando logra conectarse al servidor
 void connectReady(const char * payload, size_t length){
   socketConnected = true;
-  webSocket.emit("loginsensorkit", "{\"sensorid\":\"k1000\"}");
-  //webSocket.emit("loginsensorkit", "{\"sensorid\":\"" + hostname + "\"}");
+  webSocket.emit("loginsensorkit", "{\"kitID\":\"k1000\"}");
+  //webSocket.emit("loginsensorkit", "{\"kitID\":\"" + kitID + "\"}");
   sendAlert();
 }
 
@@ -54,7 +62,9 @@ void readAnalogSensor() {
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(alarmPin, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
+  digitalWrite(alarmPin, LOW);
   
   Serial.begin(115200);
   
@@ -74,11 +84,12 @@ void setup() {
   //Escucha desde el servidor eventos
   webSocket.on("responsefromservertrue", alertTrue);
   webSocket.on("responsefromserverfalse", alertFalse);
+  webSocket.on("desactivate", desactivate);
   
   //emitId se ejecuta solo cuando logra conectarse de manera exitosa al servidor
   webSocket.on("connect", connectReady);
   
-  webSocket.begin(url);
+  webSocket.begin(url.c_str());
 
 }
 
@@ -88,7 +99,7 @@ void loop() {
   if(socketConnected){
     readAnalogSensor();
   }
-  
+  //digitalWrite(alarmPin,LOW);
   //Serial.println(sensorValue);
 
   //rango que determina si enviar alerta o no
