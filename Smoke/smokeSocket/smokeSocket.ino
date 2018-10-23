@@ -15,13 +15,13 @@ int sensorPin = A0;
 int sensorValue = 0;
 bool socketConnected = false;
 
-bool candado = false; //candado para enviar id
-bool enviar = true;   //candado para enviar alerta
+bool lock = false;
 
 //recibe desde la app que la alerta era verdader
 void alertTrue(const char * payload, size_t length) {
   digitalWrite(LED_BUILTIN, LOW);
   Serial.printf("got alert: %s\n", payload);
+  //AQUI HACEMOS ALGO CUANDO ES VERDADERO
 }
 
 //recibe desde la app que la alerta era falsa
@@ -31,18 +31,12 @@ void alertFalse(const char * payload, size_t length) {
   digitalWrite(alarmPin, LOW);
 }
 
-//recibe desde la app que hay que apagar la alerta
-void desactivate(const char * payload, size_t length) {
-  digitalWrite(LED_BUILTIN, LOW);
-  Serial.printf("got alert: %s\n", payload);
-}
-
 //Envia id del kit cuando logra conectarse al servidor
 void connectReady(const char * payload, size_t length) {
   socketConnected = true;
   webSocket.emit("loginsensorkit", "{\"kitID\":\"k1000\"}");
   //webSocket.emit("loginsensorkit", "{\"kitID\":\"" + kitID + "\"}");
-  sendAlert();
+  //sendAlert();
 }
 
 //Envia la alerta cuando se detecta mucho monoxido
@@ -82,7 +76,6 @@ void setup() {
   //Escucha desde el servidor eventos
   webSocket.on("responsefromservertrue", alertTrue);
   webSocket.on("responsefromserverfalse", alertFalse);
-  webSocket.on("desactivate", desactivate);
 
   //emitId se ejecuta solo cuando logra conectarse de manera exitosa al servidor
   webSocket.on("connect", connectReady);
@@ -97,26 +90,14 @@ void loop() {
   if (socketConnected) {
     readAnalogSensor();
   }
-  //digitalWrite(alarmPin,LOW);
-  //Serial.println(sensorValue);
 
+  
   //rango que determina si enviar alerta o no
-  /*if(sensorValue >= 750){
-    if(enviar == true){
-      Serial.println("se paso el valor");
-      sendAlert();
-      enviar = false;
-    }
+  if(sensorValue >= 200 && !lock){
+    digitalWrite(alarmPin, HIGH);
+    sendAlert();
+    lock = true;
     digitalWrite(LED_BUILTIN, LOW);
-    }*/
-  //se abre el candado cuando el valor baja mas del limite
-  //para evitar emitir la alerta mas de una vez
-  /*else if(sensorValue <= 700){
-    if(enviar == false){
-      Serial.println("candado reiniciado");
-      enviar = true;
-    }
-    digitalWrite(LED_BUILTIN, HIGH);
-    }*/
+  }
 
 }
