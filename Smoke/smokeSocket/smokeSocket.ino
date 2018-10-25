@@ -29,20 +29,22 @@ void alertFalse(const char * payload, size_t length) {
   digitalWrite(LED_BUILTIN, HIGH);
   Serial.printf("got alert: %s\n", payload);
   digitalWrite(alarmPin, LOW);
+  lock = false;
 }
 
 //Envia id del kit cuando logra conectarse al servidor
 void connectReady(const char * payload, size_t length) {
   socketConnected = true;
-  webSocket.emit("loginsensorkit", "{\"kitID\":\"k1000\"}");
-  //webSocket.emit("loginsensorkit", "{\"kitID\":\"" + kitID + "\"}");
+  webSocket.emit("loginsensorkit", "{\"kitID\":\"Smoke-1165061640e0\"}");
+  webSocket.emit("kitupdatestatus",
+                 "{\"Smoke-1165061640e0\": {\"kitName\": \"Nombre kit 1\",\"kitStatus\": \"bien\",\"sensor\": {\"k1000s1\": {\"nombre\": \"Sensor 1 del  kit 1\",\"status\": \"bien\"},\"k1000s2\": {\"nombre\": \"Sensor 2 del kit 1\",\"status\": \"bien\"}}}}");
   //sendAlert();
 }
 
 //Envia la alerta cuando se detecta mucho monoxido
 void sendAlert() {
   webSocket.emit("alertfromsensor",
-                 "{\"k1000\": {\"kitName\": \"Nombre kit 1\",\"kitStatus\": \"mal\",\"sensor\": {\"k1000s1\": {\"nombre\": \"Sensor 1 del  kit 1\",\"status\": \"mal\"},\"k1000s2\": {\"nombre\": \"Sensor 2 del kit 1\",\"status\": \"bien\"}}}}");
+                 "{\"Smoke-1165061640e0\": {\"kitName\": \"Nombre kit 1\",\"kitStatus\": \"mal\",\"sensor\": {\"k1000s1\": {\"nombre\": \"Sensor 1 del  kit 1\",\"status\": \"mal\"},\"k1000s2\": {\"nombre\": \"Sensor 2 del kit 1\",\"status\": \"bien\"}}}}");
 }
 
 //Lee la señal analogica
