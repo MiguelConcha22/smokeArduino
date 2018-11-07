@@ -12,7 +12,7 @@ void loop() {
   // read the value from the sensor:
   sensorValue = analogRead(sensorPin);
   Serial.println(sensorValue);
-  if(sensorValue >= 200)
+  if(sensorValue >= 750)
     digitalWrite(ledPin, LOW);
   else
     digitalWrite(ledPin, HIGH);

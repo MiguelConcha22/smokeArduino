@@ -4,6 +4,14 @@
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
+#include <SPI.h>
+#include "nRF24L01.h"
+#include "RF24.h"
+
+RF24 radio(D4,D8); //(cepin, cspin)
+
+const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
+
 #define ID "Smoke-"
 String kitID = ID + String(ESP.getChipId(), HEX) + String(ESP.getFlashChipId(), HEX);
 String url = "quiet-journey-37928.herokuapp.com";
@@ -61,6 +69,15 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
   //digitalWrite(alarmPin, LOW);
 
+  pinMode(D4, OUTPUT);//PIN cspin
+
+  radio.begin();
+
+  radio.startListening();
+  //Open pipes to other nodes for communication
+  radio.openWritingPipe(pipes[0]);
+  radio.openReadingPipe(1,pipes[1]);
+
   Serial.begin(115200);
 
   WiFiManager wifiManager;
@@ -101,6 +118,19 @@ void loop() {
     lock = true;
     digitalWrite(LED_BUILTIN, LOW);
     digitalWrite(alarmPin, HIGH);
+  }
+
+  int data;
+  while (radio.available())
+  {
+    // Fetch the payload, and see if this was the last one.
+    radio.read( &data, sizeof(int) );
+    if(data == 10 && !lock){
+      sendAlert();
+      lock = true;
+      digitalWrite(LED_BUILTIN, LOW);
+      digitalWrite(alarmPin, HIGH);
+    }
   }
 
 }
