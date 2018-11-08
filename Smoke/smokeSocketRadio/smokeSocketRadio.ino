@@ -10,7 +10,7 @@
 
 RF24 radio(D4,D8); //(cepin, cspin)
 
-const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL };
+const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL};
 
 #define ID "Smoke-"
 String kitID = ID + String(ESP.getChipId(), HEX) + String(ESP.getFlashChipId(), HEX);
@@ -39,12 +39,19 @@ void alertFalse(const char * payload, size_t length) {
   Serial.printf("got alert: %s\n", payload);
   digitalWrite(alarmPin, LOW);
   lock = false;
+  radio.stopListening();
+  bool alarma = true;
+  bool ok = radio.write(&alarma, sizeof(bool));
+  while(!ok){
+    
+  }
+  radio.startListening();
 }
 
 //Envia id del kit cuando logra conectarse al servidor
 void connectReady(const char * payload, size_t length) {
   socketConnected = true;
-  webSocket.emit("loginsensorkit", "{\"kitID\":\"Smoke-1165061640e0\"}");
+  webSocket.emit("loginsensorkit", "{\"kitId\":\"Smoke-1165061640e0\"}");
   webSocket.emit("kitupdatestatus",
                  "{\"Smoke-1165061640e0\": {\"kitName\": \"Nombre kit 1\",\"kitStatus\": \"bien\",\"sensor\": {\"k1000s1\": {\"nombre\": \"Sensor 1 del  kit 1\",\"status\": \"bien\"},\"k1000s2\": {\"nombre\": \"Sensor 2 del kit 1\",\"status\": \"bien\"}}}}");
   //sendAlert();
@@ -72,6 +79,9 @@ void setup() {
   pinMode(D4, OUTPUT);//PIN cspin
 
   radio.begin();
+  delay(500);
+  radio.setPALevel(RF24_PA_HIGH);
+  radio.setDataRate( RF24_250KBPS );
 
   radio.startListening();
   //Open pipes to other nodes for communication
