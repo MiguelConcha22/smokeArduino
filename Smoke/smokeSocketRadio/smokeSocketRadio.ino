@@ -4,6 +4,14 @@
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h>         //https://github.com/tzapu/WiFiManager
 
+#include <SPI.h>
+#include "nRF24L01.h"
+#include "RF24.h"
+
+RF24 radio(D4,D8); //(cepin, cspin)
+
+const uint64_t pipes[2] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL};
+
 #define ID "Smoke-"
 String kitID = ID + String(ESP.getChipId(), HEX) + String(ESP.getFlashChipId(), HEX);
 String url = "quiet-journey-37928.herokuapp.com";
@@ -31,12 +39,19 @@ void alertFalse(const char * payload, size_t length) {
   Serial.printf("got alert: %s\n", payload);
   digitalWrite(alarmPin, LOW);
   lock = false;
+  radio.stopListening();
+  bool alarma = true;
+  bool ok = radio.write(&alarma, sizeof(bool));
+  while(!ok){
+    
+  }
+  radio.startListening();
 }
 
 //Envia id del kit cuando logra conectarse al servidor
 void connectReady(const char * payload, size_t length) {
   socketConnected = true;
-  webSocket.emit("loginsensorkit", "{\"kitID\":\"Smoke-1165061640e0\"}");
+  webSocket.emit("loginsensorkit", "{\"kitId\":\"Smoke-1165061640e0\"}");
   webSocket.emit("kitupdatestatus",
                  "{\"Smoke-1165061640e0\": {\"kitName\": \"Nombre kit 1\",\"kitStatus\": \"bien\",\"sensor\": {\"k1000s1\": {\"nombre\": \"Sensor 1 del  kit 1\",\"status\": \"bien\"},\"k1000s2\": {\"nombre\": \"Sensor 2 del kit 1\",\"status\": \"bien\"}}}}");
   //sendAlert();
@@ -60,6 +75,18 @@ void setup() {
   pinMode(alarmPin, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
   //digitalWrite(alarmPin, LOW);
+
+  pinMode(D4, OUTPUT);//PIN cspin
+
+  radio.begin();
+  delay(500);
+  radio.setPALevel(RF24_PA_HIGH);
+  radio.setDataRate( RF24_250KBPS );
+
+  radio.startListening();
+  //Open pipes to other nodes for communication
+  radio.openWritingPipe(pipes[0]);
+  radio.openReadingPipe(1,pipes[1]);
 
   Serial.begin(115200);
 
@@ -101,6 +128,19 @@ void loop() {
     lock = true;
     digitalWrite(LED_BUILTIN, LOW);
     digitalWrite(alarmPin, HIGH);
+  }
+
+  int data;
+  while (radio.available())
+  {
+    // Fetch the payload, and see if this was the last one.
+    radio.read( &data, sizeof(int) );
+    if(data == 10 && !lock){
+      sendAlert();
+      lock = true;
+      digitalWrite(LED_BUILTIN, LOW);
+      digitalWrite(alarmPin, HIGH);
+    }
   }
 
 }
